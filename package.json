@@ -1,0 +1,33 @@
+{
+  "name": "elm-chess",
+  "version": "1.0.0",
+  "description": "Chess built in Elm",
+  "main": "webpack.config.js",
+  "scripts": {
+    "start:dev": "webpack-dev-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AJChapp/elm-chess.git"
+  },
+  "author": "Andrew Chappetta",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AJChapp/elm-chess/issues"
+  },
+  "homepage": "https://github.com/AJChapp/elm-chess#readme",
+  "dependencies": {
+    "css-loader": "^3.2.0",
+    "elm-webpack-loader": "^6.0.0",
+    "file-loader": "^4.2.0",
+    "html-webpack-plugin": "^3.2.0",
+    "mini-css-extract-plugin": "^0.8.0",
+    "node-sass": "^4.12.0",
+    "sass-loader": "^7.3.1",
+    "style-loader": "^1.0.0",
+    "webpack": "^4.39.3",
+    "webpack-cli": "^3.3.7",
+    "webpack-dev-server": "^3.8.0"
+  }
+}

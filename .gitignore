@@ -1,0 +1,7 @@
+/dist/*
+!/dist/.gitkeep
+/elm-stuff
+/node_modules
+*.swo
+*.swp
+.DS_Store
