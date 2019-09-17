@@ -1,0 +1,30 @@
+$black: #000000;
+
+.game-content
+    color: white;
+    margin: auto;
+    display: grid;
+    grid-template-rows: repeat(8, 100px);
+    grid-row-gap: 0px;
+    justify-content: center;
+    color: $black;
+    background-color: $black
+
+.row
+    display: grid;
+    grid-template-columns: repeat(8, 100px);
+
+.square
+    line-height: 3.3;
+    text-align: center;
+    background-color: white;
+    font-size: 30px;
+    border-width: 1px;
+    border-color: $black;
+    border-style: solid;
+    transition: all .5s;
+.square:hover
+    background-color: #707070;
+    cursor: pointer;
+
+
