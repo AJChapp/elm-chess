@@ -5,6 +5,8 @@ This document will be the planning of the building of this app.
 
 A chess board is 8 x 8 squares
 I think i will implement as one array on the model of 64 squareValues
+#### UPDATE: 
+I think i am going to have to use 8 arrays of 8. This is to get an easy way to check if a piece would move off the board
 
 
 ## Piece Movement

@@ -19,12 +19,16 @@ $black: #000000;
     text-align: center;
     background-color: white;
     font-size: 30px;
-    border-width: 1px;
-    border-color: $black;
-    border-style: solid;
     transition: all .5s;
-.square:hover
+
+.game-content .row .square:hover
     background-color: #707070;
     cursor: pointer;
 
+.row .active_piece.square
+    background-color: green;
+
+.square.black_square
+  background-color: $black;
+  color: white;
 

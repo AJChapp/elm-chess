@@ -23,11 +23,12 @@ type Player
   | White
 
 type alias GameBoard 
-  = Array Square
+  = Array (Array Square)
 
 type Square
   = Occupied Unit
   | Unoccupied
+  | ErrorSquare
 
 type Unit
   = Pawn Player
@@ -40,86 +41,127 @@ type Unit
 type alias Model =
   { board : GameBoard
   , currentPlayer : Player
-  , activePiece : Maybe Unit
+  , activePiece : 
+    { unit: Maybe Unit 
+    , unitPosition: Maybe (Int, Int) }
   }
 
 type Msg
   = Reset
-
+  | Error
+  | SelectPiece Unit (Int, Int)
+  | DeselectPiece
 
 init : () -> ( Model, Cmd Msg )
 init _ = 
   ( { board = defaultBoard
     , currentPlayer = White
-    , activePiece = Nothing }, Cmd.none)
+    , activePiece = 
+      { unit = Nothing
+      , unitPosition = Nothing }
+  }, Cmd.none)
 
 
-defaultBoard: Array Square
+getPieceMovement : Unit -> Array (Int, Int)
+getPieceMovement unit =
+  case unit of
+   Pawn owner ->
+     Array.fromList [ (1,2) ]
+   Rook owner -> 
+     Array.fromList [ (1,2) ]
+   Knight owner ->
+     Array.fromList [ (1,2) ]
+   Bishop owner ->
+     Array.fromList [ (1,2) ]
+   Queen owner ->
+     Array.fromList [ (1,2) ]
+   King owner ->
+     Array.fromList [ (1,2) ]
+
+
+getActivePiecePostion : Model -> (Int, Int) 
+getActivePiecePostion model = 
+  case model.activePiece.unitPosition of
+    Just postion ->
+      postion
+    Nothing ->
+      (-1,-1)
+
+defaultBoard: Array (Array Square)
 defaultBoard = 
+  Array.fromList [ 
   Array.fromList [ Occupied (Rook Black)
-  , Occupied (Knight Black)
-  , Occupied (Bishop Black)
-  , Occupied (King Black)
-  , Occupied (Queen Black)
-  , Occupied (Bishop Black)
-  , Occupied (Knight Black)
-  , Occupied (Rook Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Occupied (Pawn Black)
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Unoccupied
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Pawn White)
-  , Occupied (Rook White)
-  , Occupied (Knight White)
-  , Occupied (Bishop White)
-  , Occupied (Queen White)
-  , Occupied (King  White)
-  , Occupied (Bishop White)
-  , Occupied (Knight White)
-  , Occupied (Rook White) ]
+    , Occupied (Knight Black)
+    , Occupied (Bishop Black)
+    , Occupied (King Black)
+    , Occupied (Queen Black)
+    , Occupied (Bishop Black)
+    , Occupied (Knight Black)
+    , Occupied (Rook Black) ]
+  , Array.fromList [ Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black) ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White) ]
+  , Array.fromList [ Occupied (Rook White)
+    , Occupied (Knight White)
+    , Occupied (Bishop White)
+    , Occupied (Queen White)
+    , Occupied (King  White)
+    , Occupied (Bishop White)
+    , Occupied (Knight White)
+    , Occupied (Rook White) ] ]
+
+
+isEven : Int -> Bool
+isEven num = 
+  if modBy 2 num == 0 then
+    True
+  else 
+    False
 
 
 changePlayer : Player -> Player
@@ -127,6 +169,31 @@ changePlayer player =
   case player of
     Black -> White
     White -> Black
+
+
+getCurrentSquare : Model -> (Int, Int) -> Square
+getCurrentSquare model position = 
+  let
+      (rowIndex, columnIndex) = position
+      board = model.board
+      maybeCurrentRow = Array.get rowIndex board
+      currentRow = 
+        case maybeCurrentRow of 
+          Just squareRow ->
+            squareRow
+          Nothing ->
+            --TODO see of there is a better way to handle this
+            Array.fromList [ErrorSquare]
+      maybeCurrentSquare = 
+        Array.get columnIndex currentRow
+      currentSquare = 
+        case maybeCurrentSquare of
+          Just square ->
+            square
+          Nothing ->
+            ErrorSquare
+  in
+    currentSquare
 
 --Update
 
@@ -137,8 +204,29 @@ update msg model =
       ( 
         { board = defaultBoard
         , currentPlayer = White
-        , activePiece = Nothing
+        , activePiece = model.activePiece
       }, Cmd.none)
+    Error ->
+      ( 
+        { board = defaultBoard
+        , currentPlayer = White
+        , activePiece = model.activePiece
+      }, Cmd.none)
+    SelectPiece unit unitPosition ->
+      ( 
+        { board = defaultBoard
+        , currentPlayer = White
+        , activePiece = { unit = Just unit , unitPosition = Just unitPosition }
+      }, Cmd.none)
+    DeselectPiece ->
+      ( 
+        { board = defaultBoard
+        , currentPlayer = White
+        , activePiece = { unit = Nothing, unitPosition = Nothing }
+      }, Cmd.none)
+
+
+
 
 --View
 
@@ -147,67 +235,237 @@ view model =
   { title = "Elm-Chess"
   , body = 
     [ h1 [] [ text "Elm Chess"] 
-      , div [class "game-content"] (range 1 8 |> List.map (viewBoardRow model.board)) 
+      , div [class "game-content"] (range 0 7 |> List.map (viewBoardRow model)) 
     ] }
 
 
-viewBoardRow : GameBoard -> Int -> Html Msg 
-viewBoardRow board index =
+viewBoardRow : Model -> Int -> Html Msg 
+viewBoardRow model index =
+    div [ class "row" ] (range 0 7 |> List.map (viewBoardButton model index))
+
+
+viewBoardButton : Model -> Int -> Int -> Html Msg 
+viewBoardButton model rowIndex columnIndex =
   let 
-    rangeStart = (index - 1) * 8 
-    rangeEnd = index * 8 - 1 
-  in  
-    div [ class "row" ] (range rangeStart rangeEnd |> List.map (viewBoardButton board))
+      board = model.board
+      player = model.currentPlayer
+      currentSquare = getCurrentSquare model (rowIndex, columnIndex)
+      currentSquarePositionString = "square-" ++ (String.fromInt rowIndex) ++ "," ++ (String.fromInt columnIndex)
+      squareColorString = choseBoardSquareColor (rowIndex, columnIndex)
+      activePiecePosition = getActivePiecePostion model
+      activePieceString = 
+        if activePiecePosition == (rowIndex, columnIndex) then
+          " active_piece"
+        else 
+          ""
+  in
+    div
+      [ class ("square " ++ currentSquarePositionString ++ activePieceString ++ squareColorString)
+      , createSquareOnclick model (rowIndex, columnIndex) |> onClick ]
+      [ currentSquare |> viewBoardButtonText |> text ]
 
 
-viewBoardButton : GameBoard -> Int -> Html Msg 
-viewBoardButton board index =
-  div [ class ("square square-" ++ (String.fromInt index)) ] [ Array.get index board |> viewBoardButtonText |> text ]
+createSquareOnclick : Model -> (Int, Int) -> Msg
+createSquareOnclick model currentSquarePosition = 
+  let 
+      square = getCurrentSquare model currentSquarePosition
+      currentPlayer = model.currentPlayer
+      activePiecePosition = getActivePiecePostion model
+  in
+    case square of 
+      Occupied unit ->
+        case unit of
+          Pawn owner ->
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Pawn Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset 
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Pawn White) currentSquarePosition
+                    else 
+                      DeselectPiece
+          Rook owner -> 
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Rook Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Rook White) currentSquarePosition
+                    else 
+                      DeselectPiece
+          Knight owner ->
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Knight Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Knight White) currentSquarePosition
+                    else 
+                      DeselectPiece
+          Bishop owner ->
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Bishop Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Bishop White) currentSquarePosition
+                    else 
+                      DeselectPiece
+          Queen owner ->
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Queen Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (Queen White) currentSquarePosition
+                    else 
+                      DeselectPiece
+          King owner ->
+            case owner of
+              Black ->
+                case currentPlayer of
+                  Black ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (King Black) currentSquarePosition
+                    else 
+                      DeselectPiece
+                  White ->
+                    Reset
+              White ->
+                case currentPlayer of
+                  Black ->
+                    Reset
+                  White ->
+                    if currentSquarePosition /= activePiecePosition then
+                      SelectPiece (King White) currentSquarePosition
+                    else 
+                      DeselectPiece
+      Unoccupied ->
+        case currentPlayer of
+          Black ->
+            Reset
+          White ->
+            Reset
+      ErrorSquare ->
+        Error  
 
-viewBoardButtonText : Maybe Square -> String
-viewBoardButtonText maybeSquare =
-  case maybeSquare of
-    Just squareValue ->
-      case squareValue of
+
+
+viewBoardButtonText : Square -> String
+viewBoardButtonText square =
+      case square of
         Occupied unit ->
           case unit of
-            Pawn player ->
-              case player of
+            Pawn owner ->
+              case owner of
                 Black ->
                   "B-P"
                 White ->
                   "W-P"
-            Rook player -> 
-              case player of
+            Rook owner -> 
+              case owner of
                 Black ->
                   "B-R"
                 White ->
                   "W-R"
-            Knight player ->
-              case player of
+            Knight owner ->
+              case owner of
                 Black ->
                   "B-K"
                 White ->
                   "W-K"
-            Bishop player ->
-              case player of
+            Bishop owner ->
+              case owner of
                 Black ->
                   "B-B"
                 White ->
                   "W-B"
-            Queen player ->
-              case player of
+            Queen owner ->
+              case owner of
                 Black ->
                   "B-Q"
                 White ->
                   "W-Q"
-            King player ->
-              case player of
+            King owner ->
+              case owner of
                 Black ->
                   "B-King"
                 White ->
                   "W-King"
         Unoccupied ->
           "E"
-    Nothing ->
-      "E"
+        ErrorSquare ->
+          "ERROR"
+
+
+choseBoardSquareColor : (Int, Int) -> String
+choseBoardSquareColor (rowIndex, columnIndex) = 
+  if (isEven rowIndex) then
+    if (isEven columnIndex) then
+      " black_square"
+    else
+      " white_square"
+  else 
+    if (isEven columnIndex) then
+      " white_square"
+    else
+      " black_square"
+
+
+
+
