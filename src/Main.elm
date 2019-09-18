@@ -37,6 +37,7 @@ type Unit
   | Bishop Player
   | Queen Player
   | King Player
+  | ErrorUnit
 
 type alias Model =
   { board : GameBoard
@@ -51,6 +52,8 @@ type Msg
   | Error
   | SelectPiece Unit (Int, Int)
   | DeselectPiece
+  | MoveUnit (Int, Int) (Int,Int) Unit
+  | DoNothing
 
 init : () -> ( Model, Cmd Msg )
 init _ = 
@@ -62,21 +65,40 @@ init _ =
   }, Cmd.none)
 
 
-getPieceMovement : Unit -> Array (Int, Int)
-getPieceMovement unit =
+getUnitMovementOptions : Unit -> Array (Int, Int)
+getUnitMovementOptions unit =
   case unit of
    Pawn owner ->
      Array.fromList [ (1,2) ]
    Rook owner -> 
      Array.fromList [ (1,2) ]
    Knight owner ->
-     Array.fromList [ (1,2) ]
+     Array.fromList [ (2,-1), (2,1), (-1,2), (1,2), (-2,1), (-2,-1), (1,-2), (-1,-2) ]
    Bishop owner ->
      Array.fromList [ (1,2) ]
    Queen owner ->
      Array.fromList [ (1,2) ]
    King owner ->
      Array.fromList [ (1,2) ]
+   ErrorUnit -> 
+     Array.fromList [ (1,1) ]
+
+
+isPositionValid : (Int, Int) -> Bool
+isPositionValid (yIndex, xIndex) =
+  if yIndex < 0 || yIndex > 7 || xIndex < 0 || xIndex > 7 then
+    False 
+  else 
+    True
+
+
+getPossibleLzs : Array (Int, Int) -> (Int, Int) -> Array (Int, Int)
+getPossibleLzs possibleMoves currentPosition =
+  let 
+    (rowIndex, columnIndex) = currentPosition
+    maybePossibleLZ = Array.map (\(x, y) -> (y+rowIndex, x + columnIndex)) possibleMoves
+  in  
+    Array.filter isPositionValid maybePossibleLZ
 
 
 getActivePiecePostion : Model -> (Int, Int) 
@@ -85,7 +107,7 @@ getActivePiecePostion model =
     Just postion ->
       postion
     Nothing ->
-      (-1,-1)
+      (-9,-9)
 
 defaultBoard: Array (Array Square)
 defaultBoard = 
@@ -199,6 +221,10 @@ getCurrentSquare model position =
 
 update : Msg -> Model -> ( Model, Cmd Msg)
 update msg model =
+  let
+      --TODO REMove me 
+    _ = Debug.log "msg me" msg 
+  in
   case msg of
     Reset ->
       ( 
@@ -206,24 +232,61 @@ update msg model =
         , currentPlayer = White
         , activePiece = model.activePiece
       }, Cmd.none)
+    
     Error ->
       ( 
         { board = defaultBoard
         , currentPlayer = White
         , activePiece = model.activePiece
       }, Cmd.none)
+    
     SelectPiece unit unitPosition ->
       ( 
-        { board = defaultBoard
+        { board = model.board
         , currentPlayer = White
         , activePiece = { unit = Just unit , unitPosition = Just unitPosition }
       }, Cmd.none)
+    
     DeselectPiece ->
       ( 
-        { board = defaultBoard
+        { board = model.board
         , currentPlayer = White
         , activePiece = { unit = Nothing, unitPosition = Nothing }
       }, Cmd.none)
+
+    MoveUnit positionFrom positionTo unit ->
+      let 
+        (fromRowIndex, fromColumnIndex) = positionFrom
+        oldFromRow = 
+          case Array.get fromRowIndex model.board of
+            Just row ->
+              row
+            Nothing ->
+              Array.repeat 8 ErrorSquare
+        newFromRow = 
+          Array.set fromColumnIndex Unoccupied oldFromRow 
+        (toRowIndex, toColumnIndex) = positionTo
+        oldToRow = 
+          case Array.get toRowIndex model.board of
+            Just row ->
+              row
+            Nothing -> 
+              Array.repeat 8 ErrorSquare
+        newToRow = 
+          Array.set toColumnIndex (Occupied unit) oldToRow
+
+        startMoveBoard = Array.set fromRowIndex newFromRow model.board
+        endMoveBoard = Array.set toRowIndex newToRow startMoveBoard
+      in
+        ( 
+          { board = endMoveBoard
+          , currentPlayer = White
+          , activePiece = { unit = Nothing, unitPosition = Nothing }
+        }, Cmd.none)
+
+    DoNothing ->
+      ( model , Cmd.none)
+
 
 
 
@@ -250,17 +313,34 @@ viewBoardButton model rowIndex columnIndex =
       board = model.board
       player = model.currentPlayer
       currentSquare = getCurrentSquare model (rowIndex, columnIndex)
+      activePiecePosition = getActivePiecePostion model
+
       currentSquarePositionString = "square-" ++ (String.fromInt rowIndex) ++ "," ++ (String.fromInt columnIndex)
       squareColorString = choseBoardSquareColor (rowIndex, columnIndex)
-      activePiecePosition = getActivePiecePostion model
+      possibleLzs = 
+        case model.activePiece.unit of
+          Nothing ->
+            Array.empty
+          Just unit ->
+            getPossibleLzs (getUnitMovementOptions unit) activePiecePosition
+      lzString = 
+        if Array.toList possibleLzs |> List.member (rowIndex, columnIndex) then
+          " possible_lz"
+        else
+          ""
       activePieceString = 
         if activePiecePosition == (rowIndex, columnIndex) then
           " active_piece"
         else 
           ""
+      classString = "square " 
+        ++ currentSquarePositionString 
+        ++ activePieceString 
+        ++ squareColorString 
+        ++ lzString
   in
     div
-      [ class ("square " ++ currentSquarePositionString ++ activePieceString ++ squareColorString)
+      [ class classString
       , createSquareOnclick model (rowIndex, columnIndex) |> onClick ]
       [ currentSquare |> viewBoardButtonText |> text ]
 
@@ -271,6 +351,12 @@ createSquareOnclick model currentSquarePosition =
       square = getCurrentSquare model currentSquarePosition
       currentPlayer = model.currentPlayer
       activePiecePosition = getActivePiecePostion model
+      possibleLzs = 
+        case model.activePiece.unit of
+          Nothing ->
+            Array.empty
+          Just unit ->
+            getPossibleLzs (getUnitMovementOptions unit) activePiecePosition
   in
     case square of 
       Occupied unit ->
@@ -285,11 +371,11 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset 
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (Pawn White) currentSquarePosition
@@ -305,11 +391,11 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (Rook White) currentSquarePosition
@@ -325,11 +411,11 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (Knight White) currentSquarePosition
@@ -345,11 +431,11 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (Bishop White) currentSquarePosition
@@ -365,11 +451,11 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (Queen White) currentSquarePosition
@@ -385,22 +471,29 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    Reset
+                    DoNothing
               White ->
                 case currentPlayer of
                   Black ->
-                    Reset
+                    DoNothing
                   White ->
                     if currentSquarePosition /= activePiecePosition then
                       SelectPiece (King White) currentSquarePosition
                     else 
                       DeselectPiece
+          ErrorUnit ->
+            Error
       Unoccupied ->
-        case currentPlayer of
-          Black ->
-            Reset
-          White ->
-            Reset
+        --TODO
+        --if checkPath from to 
+        case model.activePiece.unit of
+          Just unit ->
+            if Array.toList possibleLzs |> List.member currentSquarePosition then
+              MoveUnit activePiecePosition currentSquarePosition unit
+            else 
+              DoNothing
+          Nothing ->
+            DoNothing
       ErrorSquare ->
         Error  
 
@@ -447,10 +540,12 @@ viewBoardButtonText square =
                   "B-King"
                 White ->
                   "W-King"
+            ErrorUnit ->
+              "UNIT_ERROR"
         Unoccupied ->
           "E"
         ErrorSquare ->
-          "ERROR"
+          "SQUARE_ERROR"
 
 
 choseBoardSquareColor : (Int, Int) -> String
