@@ -95,8 +95,6 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
         baseMoveList = Array.fromList [ (1, 0) ]
         moveList_v2 = 
           if rowIndex == 1 then
-            --TODO implement En Passant
-            --TODO implement check to see if there is a unit at (1, 0)
             Array.fromList [ (2, 0) ] |> Array.append baseMoveList 
           else
             baseMoveList
@@ -184,6 +182,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
 -- Rook --
 generateRookMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
 generateRookMoveList board owner (rowIndex, columnIndex) =
+  --TODO rename moveLists
   let 
     moveArray_v1 = 
       Array.initialize 8 (\(y) -> (y, 0))  
@@ -210,6 +209,26 @@ generateRookMoveList board owner (rowIndex, columnIndex) =
     finalMoveArray
 
 
+--TODO finish me
+generateBishopMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
+generateBishopMoveList board owner (rowIndex, columnIndex) =
+  --Start Here
+
+  let
+    moveArray_v1 = 
+      Array.initialize 8 (\(x) -> (x, x))
+    moveArray_v2 =
+      Array.initialize 8 (\(x) -> (x * -1, x))
+    moveArray_v3 =
+      Array.initialize 8 (\(x) -> (x, x * -1))
+    moveArray_v4 =
+      Array.initialize 8 (\(x) -> (x * -1, x * -1))
+ 
+  in 
+    Array.fromList [ (1,2) ]
+
+
+
 -- Unit Move Index -- 
 getUnitMovementOptions : GameBoard -> Unit -> (Int, Int) -> Array (Int, Int)
 getUnitMovementOptions board unit unitPosition =
@@ -225,7 +244,7 @@ getUnitMovementOptions board unit unitPosition =
       in 
         getPossibleLzs unitPosition moveList
     Bishop owner ->
-      Array.fromList [ (1,2) ]
+      generateBishopMoveList board owner unitPosition
     Queen owner ->
       Array.fromList [ (1,2) ]
     King owner ->
