@@ -456,6 +456,7 @@ update msg model =
 
     MoveUnit positionFrom positionTo unit ->
       let 
+        --TODO clean this up
         (fromRowIndex, fromColumnIndex) = positionFrom
         oldFromRow = 
           case Array.get fromRowIndex model.board of
@@ -463,12 +464,13 @@ update msg model =
               row
             Nothing ->
               Array.repeat 8 ErrorSquare
-        _ = Debug.log "oldFromRow" oldFromRow
         newFromRow = 
           Array.set fromColumnIndex Unoccupied oldFromRow 
+        startMoveBoard =  Array.set fromRowIndex newFromRow model.board
+
         (toRowIndex, toColumnIndex) = positionTo
         oldToRow = 
-          case Array.get toRowIndex model.board of
+          case Array.get toRowIndex startMoveBoard of
             Just row ->
               row
             Nothing -> 
@@ -476,7 +478,6 @@ update msg model =
         newToRow = 
           Array.set toColumnIndex (Occupied unit) oldToRow
 
-        startMoveBoard =  Array.set fromRowIndex newFromRow model.board
         endMoveBoard = 
           if (isPositionValid positionFrom) && (isPositionValid positionTo) then
             Array.set toRowIndex newToRow startMoveBoard
