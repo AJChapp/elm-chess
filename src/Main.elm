@@ -188,21 +188,19 @@ generateRookMoveList board owner (rowIndex, columnIndex) =
     moveArray_v1 = 
       Array.initialize 8 (\(y) -> (y, 0))  
         |> getPossibleLzs (rowIndex, columnIndex)
-        --|> Array.filter (rookFilter board owner (rowIndex, columnIndex))
         |> Array.filter (checkSpaceBewteenVertical board (rowIndex, columnIndex))
     moveArray_v2 = 
       Array.initialize 8 (\(y) -> (y * -1, 0))  
         |> getPossibleLzs (rowIndex, columnIndex)
-        --|> Array.filter (rookFilter board owner (rowIndex, columnIndex))
-        --|> Array.filter (checkSpaceBewteenVertical board (rowIndex, columnIndex))
+        |> Array.filter (checkSpaceBewteenVertical board (rowIndex, columnIndex))
     moveArray_v3 = 
       Array.initialize 8 (\(x) -> (0, x))  
         |> getPossibleLzs (rowIndex, columnIndex)
-        |> Array.filter (rookFilter board owner (rowIndex, columnIndex))
+        |> Array.filter (checkSpaceBewteenHorizontal board (rowIndex, columnIndex))
     moveArray_v4 = 
       Array.initialize 8 (\(x) -> (0, x * -1))  
         |> getPossibleLzs (rowIndex, columnIndex)
-        |> Array.filter (rookFilter board owner (rowIndex, columnIndex))
+        |> Array.filter (checkSpaceBewteenHorizontal board (rowIndex, columnIndex))
    
     finalMoveArray =
       Array.append moveArray_v1 moveArray_v2
@@ -212,21 +210,6 @@ generateRookMoveList board owner (rowIndex, columnIndex) =
     finalMoveArray
 
 
-rookFilter : GameBoard -> Player -> (Int, Int) -> (Int, Int) -> Bool
-rookFilter board owner (currentY, currentX) (newY, newX) =
-  let 
-    isPosValid = isPositionValid (newY, newX)
-    passedVerticalCheck = checkSpaceBewteenVertical board (currentY, currentX) (newY, newX)
-    passedHorizontalCheck = checkSpaceBewteenHorizontal board (currentY, currentX) (newY, newX)
-  in
-    if not isPosValid then 
-      False
-    else if not passedVerticalCheck && not passedHorizontalCheck then
-      False
-    else
-      True
-
-
 -- Unit Move Index -- 
 getUnitMovementOptions : GameBoard -> Unit -> (Int, Int) -> Array (Int, Int)
 getUnitMovementOptions board unit unitPosition =
@@ -234,10 +217,7 @@ getUnitMovementOptions board unit unitPosition =
     Pawn owner ->
       generatePawnMoveList board owner unitPosition 
     Rook owner -> 
-      let 
-        _ = Debug.log "Rook Move List" (generateRookMoveList board owner unitPosition)
-      in
-        generateRookMoveList board owner unitPosition
+      generateRookMoveList board owner unitPosition
     Knight owner ->
       let 
         --TODO can i generate this?
@@ -251,55 +231,54 @@ getUnitMovementOptions board unit unitPosition =
     King owner ->
       Array.fromList [ (1,2) ]
 
---Start Here
 checkSpaceBewteenVertical : GameBoard -> (Int, Int) -> (Int, Int) -> Bool
 checkSpaceBewteenVertical board (currentY, currentX) (newY, newX) =
-  let 
-    (lowestY, highestY) = 
-      if (currentY >= newY) then
-        (newY, currentY)
-      else 
+  let
+    (lowY,highY) =
+      if currentY >= newY then
+        (newY,currentY)
+      else
         (currentY, newY)
 
-    --_ = Debug.log "invalidMoveSpaces"  (List.range lowestY highestY |> List.map (\(y) -> getSquare board (y,currentX)))
-    invalidMoveSpaces = 
-      List.range lowestY highestY
-        |> List.map (\(y) -> getSquare board (y,currentX))
-        |> List.filter (\(square) -> 
-          case square of
-            Unoccupied ->
-              False
-            _ ->
-              True 
-        )
-  in
-    if (List.length invalidMoveSpaces) > 0 then
-      False
-    else
-      True
-
-
-checkSpaceBewteenHorizontal : GameBoard -> (Int, Int) -> (Int, Int) -> Bool
-checkSpaceBewteenHorizontal board (currentY, currentX) (newY, newX) =
-  let 
-    (lowestX, highestX) = 
-      if (currentX >= newX) then
-        (newX, currentX)
-      else 
-        (currentX, newX)
-
-    invalidMoveSpaces = 
-      List.range lowestX highestX
-      |> List.map (\(x) -> getSquare board (currentY, x))
-      |> List.filter (\(square) -> 
+    invalidSquares =
+      List.range (lowY + 1) (highY - 1) -- Get y values for inbetween spaces
+      |> List.map (\(y) -> (y, currentX)) -- Group with their x value
+      |> List.map (\(y, x) -> getSquare board (y,x)) --Converts to squares
+      |> List.filter (\ (square) -> 
         case square of
           Unoccupied ->
             False
           _ ->
-            True 
+            True
+      ) 
+  in
+      if (List.length invalidSquares) > 0 then
+        False
+      else
+        True
+
+checkSpaceBewteenHorizontal : GameBoard -> (Int, Int) -> (Int, Int) -> Bool
+checkSpaceBewteenHorizontal board (currentY, currentX) (newY, newX) =
+  let
+    (lowX,highX) =
+      if currentX >= newX then
+        (newX,currentX)
+      else
+        (currentX, newX)
+
+    invalidSquares =
+      List.range (lowX + 1) (highX - 1) -- Get x values for inbetween spaces
+      |> List.map (\(x) -> (currentY, x)) -- Group with their y value
+      |> List.map (\(y, x) -> getSquare board (y,x)) --Converts to squares
+      |> List.filter (\ (square) -> 
+        case square of
+          Unoccupied ->
+            False
+          _ ->
+            True
       )
   in
-    if (List.length invalidMoveSpaces) > 0 then
+    if (List.length invalidSquares) > 0 then
       False
     else
       True
@@ -484,6 +463,7 @@ update msg model =
               row
             Nothing ->
               Array.repeat 8 ErrorSquare
+        _ = Debug.log "oldFromRow" oldFromRow
         newFromRow = 
           Array.set fromColumnIndex Unoccupied oldFromRow 
         (toRowIndex, toColumnIndex) = positionTo
