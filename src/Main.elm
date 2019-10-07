@@ -86,8 +86,9 @@ getUnitOwner unit =
 ----------------------------------------------------------------------------------------------------------------------
 
 -- Pawn --
-generatePawnMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
-generatePawnMoveList board owner (rowIndex, columnIndex) =
+--TODO can i simplify this?
+generatePawnMoveArray : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
+generatePawnMoveArray board owner (rowIndex, columnIndex) =
   case owner of
     Black ->
       let
@@ -179,8 +180,8 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
 
 
 -- Rook --
-generateRookMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
-generateRookMoveList board owner (rowIndex, columnIndex) =
+generateRookMoveArray : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
+generateRookMoveArray board owner (rowIndex, columnIndex) =
   --TODO rename moveLists
   let 
     moveArray_v1 = 
@@ -208,8 +209,8 @@ generateRookMoveList board owner (rowIndex, columnIndex) =
     finalMoveArray
 
 
-generateBishopMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
-generateBishopMoveList board owner (rowIndex, columnIndex) =
+generateBishopMoveArray : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
+generateBishopMoveArray board owner (rowIndex, columnIndex) =
   --Start Here
   let
     moveArray_v1 = 
@@ -238,14 +239,61 @@ generateBishopMoveList board owner (rowIndex, columnIndex) =
     finalMoveArray
 
 
+generateQueenMoveArray: GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
+generateQueenMoveArray board owner (rowIndex, columnIndex) =
+  let
+    moveArray_v1 = 
+      Array.initialize 8 (\(x) -> (x, x))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
+    moveArray_v2 =
+      Array.initialize 8 (\(x) -> (x * -1, x))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
+    moveArray_v3 =
+      Array.initialize 8 (\(x) -> (x, x * -1))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
+    moveArray_v4 =
+      Array.initialize 8 (\(x) -> (x * -1, x * -1))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
+    moveArray_v5 = 
+      Array.initialize 8 (\(y) -> (y, 0))  
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenVertical board (rowIndex, columnIndex))
+    moveArray_v6 = 
+      Array.initialize 8 (\(y) -> (y * -1, 0))  
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenVertical board (rowIndex, columnIndex))
+    moveArray_v7 = 
+      Array.initialize 8 (\(x) -> (0, x))  
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenHorizontal board (rowIndex, columnIndex))
+    moveArray_v8 = 
+      Array.initialize 8 (\(x) -> (0, x * -1))  
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenHorizontal board (rowIndex, columnIndex))
+   
+    finalMoveArray =
+      Array.append moveArray_v1 moveArray_v2
+        |> Array.append moveArray_v3
+        |> Array.append moveArray_v4
+        |> Array.append moveArray_v5
+        |> Array.append moveArray_v6
+        |> Array.append moveArray_v7
+        |> Array.append moveArray_v8
+  in
+    finalMoveArray
+
 -- Unit Move Index -- 
 getUnitMovementOptions : GameBoard -> Unit -> (Int, Int) -> Array (Int, Int)
 getUnitMovementOptions board unit unitPosition =
   case unit of
     Pawn owner ->
-      generatePawnMoveList board owner unitPosition 
+      generatePawnMoveArray board owner unitPosition 
     Rook owner -> 
-      generateRookMoveList board owner unitPosition
+      generateRookMoveArray board owner unitPosition
     Knight owner ->
       let 
         --TODO can i generate this?
@@ -253,9 +301,9 @@ getUnitMovementOptions board unit unitPosition =
       in 
         getPossibleLzs unitPosition moveList
     Bishop owner ->
-      generateBishopMoveList board owner unitPosition
+      generateBishopMoveArray board owner unitPosition
     Queen owner ->
-      Array.fromList [ (1,2) ]
+      generateQueenMoveArray board owner unitPosition
     King owner ->
       Array.fromList [ (1,2) ]
 
