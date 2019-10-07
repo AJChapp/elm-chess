@@ -37,7 +37,6 @@ type Unit
   | Bishop Player
   | Queen Player
   | King Player
-  --| ErrorUnit
 
 type alias Model =
   { board : GameBoard
@@ -99,7 +98,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
           else
             baseMoveList
         moveList_v3 = 
-          if isPositionValid (rowIndex + 1, columnIndex + 1) then 
+          if doesPositionExist (rowIndex + 1, columnIndex + 1) then 
             case getSquare board (rowIndex + 1, columnIndex + 1) of
               Occupied unit ->
                 case (getUnitOwner unit) of 
@@ -112,7 +111,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
           else
             moveList_v2
         moveList_v4 = 
-          if isPositionValid (rowIndex + 1, columnIndex - 1) then
+          if doesPositionExist (rowIndex + 1, columnIndex - 1) then
             case getSquare board (rowIndex + 1, columnIndex + 1) of
               Occupied unit ->
                 case (getUnitOwner unit) of 
@@ -130,7 +129,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
       let
           --TODO rename moveLists
         baseMoveList = 
-          if isPositionValid (rowIndex - 1, columnIndex) then
+          if doesPositionExist (rowIndex - 1, columnIndex) then
            case getSquare board (rowIndex - 1, columnIndex) of 
             Occupied unit ->
               Array.empty 
@@ -149,7 +148,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
             baseMoveList
 
         moveList_v3 = 
-          if isPositionValid (rowIndex - 1, columnIndex + 1) then 
+          if doesPositionExist (rowIndex - 1, columnIndex + 1) then 
             case getSquare board (rowIndex - 1, columnIndex + 1) of
               Occupied unit ->
                 case (getUnitOwner unit) of 
@@ -163,7 +162,7 @@ generatePawnMoveList board owner (rowIndex, columnIndex) =
             moveList_v2
 
         moveList_v4 = 
-          if isPositionValid (rowIndex - 1, columnIndex - 1) then 
+          if doesPositionExist (rowIndex - 1, columnIndex - 1) then 
             case getSquare board (rowIndex - 1, columnIndex - 1) of
               Occupied unit ->
                 case (getUnitOwner unit) of 
@@ -209,24 +208,34 @@ generateRookMoveList board owner (rowIndex, columnIndex) =
     finalMoveArray
 
 
---TODO finish me
 generateBishopMoveList : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
 generateBishopMoveList board owner (rowIndex, columnIndex) =
   --Start Here
-
   let
     moveArray_v1 = 
       Array.initialize 8 (\(x) -> (x, x))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
     moveArray_v2 =
       Array.initialize 8 (\(x) -> (x * -1, x))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
     moveArray_v3 =
       Array.initialize 8 (\(x) -> (x, x * -1))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
     moveArray_v4 =
       Array.initialize 8 (\(x) -> (x * -1, x * -1))
+        |> getPossibleLzs (rowIndex, columnIndex)
+        |> Array.filter (checkSpaceBewteenDiagonal board (rowIndex, columnIndex))
+
+    finalMoveArray =
+      Array.append moveArray_v1 moveArray_v2
+        |> Array.append moveArray_v3
+        |> Array.append moveArray_v4
  
   in 
-    Array.fromList [ (1,2) ]
-
+    finalMoveArray
 
 
 -- Unit Move Index -- 
@@ -303,8 +312,68 @@ checkSpaceBewteenHorizontal board (currentY, currentX) (newY, newX) =
       True
 
 
-isPositionValid : (Int, Int) -> Bool
-isPositionValid (yIndex, xIndex) =
+checkSpaceBewteenDiagonal : GameBoard -> (Int, Int) -> (Int, Int) -> Bool
+checkSpaceBewteenDiagonal board (currentY, currentX) (newY, newX) =
+  let
+    (lowX,highX) =
+      if currentX >= newX then
+        (newX, currentX)
+      else
+        (currentX, newX)
+
+    (lowY,highY) =
+      if currentY >= newY then
+        (newY, currentY)
+      else
+        (currentY, newY)
+
+    yValues = 
+      if currentY >= newY then
+          List.range (lowY + 1) (highY - 1)
+        else 
+          List.range (lowY + 1) (highY - 1)
+          |> List.reverse
+    xValues = 
+      if currentX >= newX then
+        List.range (lowX + 1) (highX - 1)
+      else 
+        List.range (lowX + 1) (highX - 1)
+        |> List.reverse
+
+    invalidSquares =
+      squashIntListToTupleList yValues xValues
+        |> List.map (\(y, x) -> getSquare board (y, x)) --Converts to squares
+        |> List.filter (\ (square) -> 
+          case square of
+            Unoccupied ->
+              False
+            _ ->
+              True
+        )
+  in
+    if (List.length invalidSquares) > 0 then
+      False
+    else
+      True
+
+squashIntListToTupleList : List Int -> List Int -> List(Int,Int)
+squashIntListToTupleList yList xList =
+  let
+    yArray = Array.fromList yList
+    xArray = Array.fromList xList
+  in
+    Array.indexedMap (\ i y -> (y, (Maybe.withDefault 10 (Array.get i xArray)))) yArray
+      |> Array.filter (\ (y, x) -> 
+        if (x > 10) then
+          False
+        else
+          True
+        )
+      |> Array.toList
+
+
+doesPositionExist : (Int, Int) -> Bool
+doesPositionExist (yIndex, xIndex) =
   if yIndex < 0 || yIndex > 7 || xIndex < 0 || xIndex > 7 then
     False 
   else 
@@ -317,7 +386,7 @@ getPossibleLzs currentPosition possibleMoves =
     (rowIndex, columnIndex) = currentPosition
     maybePossibleLZ = Array.map (\(y, x) -> (y + rowIndex, x + columnIndex)) possibleMoves
   in  
-    Array.filter isPositionValid maybePossibleLZ
+    Array.filter doesPositionExist maybePossibleLZ
 
 
 getActivePiecePostion : Model -> (Int, Int) 
@@ -498,7 +567,7 @@ update msg model =
           Array.set toColumnIndex (Occupied unit) oldToRow
 
         endMoveBoard = 
-          if (isPositionValid positionFrom) && (isPositionValid positionTo) then
+          if (doesPositionExist positionFrom) && (doesPositionExist positionTo) then
             Array.set toRowIndex newToRow startMoveBoard
           else
             let
@@ -506,7 +575,7 @@ update msg model =
             in
               model.board
         nextPlayer = 
-          if (isPositionValid positionFrom) && (isPositionValid positionTo) then
+          if (doesPositionExist positionFrom) && (doesPositionExist positionTo) then
             changePlayer model.currentPlayer
           else
             model.currentPlayer
@@ -634,7 +703,14 @@ createSquareOnclick model currentSquarePosition =
                     else 
                       DeselectPiece
                   White ->
-                    DoNothing
+                    case model.activePiece.unit of
+                      Just activeUnit ->
+                        if Array.toList possibleLzs |> List.member currentSquarePosition then
+                          MoveUnit activePiecePosition currentSquarePosition activeUnit
+                        else 
+                          DoNothing
+                      Nothing ->
+                        DoNothing
               White ->
                 case currentPlayer of
                   Black ->
@@ -784,8 +860,6 @@ viewBoardButtonText square =
                   "B-King"
                 White ->
                   "W-King"
-            --ErrorUnit ->
-              --"UNIT_ERROR"
         Unoccupied ->
           ""
         ErrorSquare ->

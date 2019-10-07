@@ -3,6 +3,35 @@ This document will be the planning of the building of this app.
 
 ## The Board
 
+Currently using:
+Board = Array 
+    [ Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    , Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    ]
+
+Possible future types:
+record {
+    a: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    b: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    c: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    d: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    e: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    f: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    g: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+    h: Array[Square, Square, Square, Square, Square, Square, Square, Square]
+}
+
+record {
+    (0,1): Square
+    ...
+}
+
 A chess board is 8 x 8 squares
 I think i will implement as one array on the model of 64 squareValues
 #### UPDATE: 
