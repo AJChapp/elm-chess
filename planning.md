@@ -29,6 +29,8 @@ record {
 
 record {
     (0,1): Square
+    (0,2): Square
+    (0,3): Square
     ...
 }
 
@@ -49,6 +51,11 @@ Hint to acomplish
     - Visually: 
         div [ class "square black" ++ (generateClasses model)] []
         the generateClasses function will return a string based on some complex logic (TBD) that will output some classes
+## Declaring a Winner
+    Everytime a unit is moved a check will be made on every one of the current players pieces. If the opposing kings position is in the collective moveList of all of the current players pieces the opposing player is put in check. If the king gets taken after that it is checkmate. 
+
+I decided against doing any sort of check for checkmate because to me a player should have to take the king. (also doing a check for checkmate would be very expensive.) I will most likly go back and add the functionality if i have the time.
+
 
 ### Actual Movement
 I should be able to give a piece a "movement value".
@@ -80,19 +87,31 @@ Im not 100% how im going to implement a piece not being able to move thru anothe
 
 ## Development Phases 
 Note: there will heavy testing bewteen phases
-### Phase 1.) 
+### Phase 1a.) (complete) 
  * All chess pieces can move and take pieces
    * No special moves 
  * When checked you get an alert of some kind
  * Winner declared on checkmate
 
-### Phase 2.) 
+### Phase 1b.) 
+ * Test
+
+### Phase 2a.) 
+ * Implement Tie
  * Special moves
    * En Passant
    * Castling
    * Unit Promotions
+ * Install script
+ * Uninstall Script
 
-### Phase 3.)
+### Phase 2b.) 
+ * Test
+
+### Phase 3a.)
  * Show taken pieces
  * Move timer
  * Unit Graphics
+
+### Phase 3b.)
+ * Test 
