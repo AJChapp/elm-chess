@@ -93,7 +93,6 @@ getUnitOwner unit =
 ----------------------------------------------------------------------------------------------------------------------
 
 -- Pawn --
---TODO can i simplify this?
 generatePawnMoveArray : GameBoard -> Player -> (Int, Int) -> Array (Int, Int)
 generatePawnMoveArray board owner (rowIndex, columnIndex) =
   let
@@ -117,55 +116,46 @@ generatePawnMoveArray board owner (rowIndex, columnIndex) =
         ErrorSquare ->
           Array.empty
     moveArray_v2 = 
-      case owner of
-        Black ->
-          if rowIndex == 1 then
-            if checkSpaceBewteenVertical board (rowIndex, columnIndex) (rowIndex + 2 * decider, columnIndex) then
-              if (getSquare board (rowIndex + 2 * decider, columnIndex)) == Unoccupied then
-                Array.fromList [ (2 * decider, 0) ] |> Array.append moveArray_v1 
-              else
-                moveArray_v1
-            else 
-              moveArray_v1
+      if rowIndex == 1 && decider == 1 || rowIndex == 6 && decider == -1 then
+        if checkSpaceBewteenVertical board (rowIndex, columnIndex) (rowIndex + 2 * decider, columnIndex) then
+          if (getSquare board (rowIndex + 2 * decider, columnIndex)) == Unoccupied then
+            Array.fromList [ (2 * decider, 0) ]
           else
-            moveArray_v1
-        White -> 
-          if rowIndex == 6 then
-            if checkSpaceBewteenVertical board (rowIndex, columnIndex) (rowIndex - 2, columnIndex) then
-              if (getSquare board (rowIndex + 2 * decider, columnIndex)) == Unoccupied then
-                Array.fromList [ (2 * decider, 0) ] |> Array.append moveArray_v1 
-              else
-                moveArray_v1
-            else
-              moveArray_v1
-          else
-            moveArray_v1
+            Array.empty
+        else 
+          Array.empty
+      else
+        Array.empty
     moveArray_v3 = 
       if doesPositionExist (rowIndex + 1 * decider, columnIndex + 1) then 
         case getSquare board (rowIndex + 1 * decider, columnIndex + 1) of
           Occupied unit ->
             if (getUnitOwner unit) /= owner then 
-              Array.fromList [ (1 * decider, 1) ] |> Array.append moveArray_v2
+              Array.fromList [ (1 * decider, 1) ]
             else
-              moveArray_v2
+              Array.empty
           _ ->
-            moveArray_v2
+            Array.empty
       else
-        moveArray_v2
+        Array.empty
     moveArray_v4 = 
       if doesPositionExist (rowIndex + 1 * decider, columnIndex - 1) then
         case getSquare board (rowIndex + 1 * decider, columnIndex - 1) of
           Occupied unit ->
             if (getUnitOwner unit) /= owner then 
-              Array.fromList [ (1 * decider, -1) ] |> Array.append moveArray_v3
+              Array.fromList [ (1 * decider, -1) ]
             else
-              moveArray_v3
+              Array.empty
           _ ->
-            moveArray_v3
+            Array.empty
       else 
-        moveArray_v3
+        Array.empty
+
+    finalMoveArray = Array.append moveArray_v1 moveArray_v2
+        |> Array.append moveArray_v3
+        |> Array.append moveArray_v4
   in 
-    getPossibleLzs (rowIndex, columnIndex) moveArray_v4
+    getPossibleLzs (rowIndex, columnIndex) finalMoveArray
 
 
 -- Rook --
@@ -315,23 +305,23 @@ checkSpaceBewteenDiagonal board (currentY, currentX) (newY, newX) =
       else
         (currentY, newY)
 
-    yValues = 
+    yValues = -- List of all the yValues of inbetween squares
       if currentY >= newY then
           List.range (lowY + 1) (highY - 1)
         else 
           List.range (lowY + 1) (highY - 1)
           |> List.reverse
-    xValues = 
-      if currentX >= newX then
+    xValues = -- List of all the xValues of inbetween squares
+      if currentX >= newX then 
         List.range (lowX + 1) (highX - 1)
       else 
         List.range (lowX + 1) (highX - 1)
         |> List.reverse
 
     invalidSquares =
-      squashIntListToTupleList yValues xValues
+      squashIntListToTupleList yValues xValues --Combines Y's with their X's
         |> List.map (\(y, x) -> getSquare board (y, x)) --Converts to squares
-        |> List.filter (\ (square) -> 
+        |> List.filter (\ (square) -> -- Filters out all of the valid squares
           case square of
             Unoccupied ->
               False
@@ -339,7 +329,7 @@ checkSpaceBewteenDiagonal board (currentY, currentX) (newY, newX) =
               True
         )
   in
-    if (List.length invalidSquares) > 0 then
+    if (List.length invalidSquares) > 0 then -- if there are any invalid squares the move is invalid
       False
     else
       True
@@ -377,75 +367,6 @@ getPossibleLzs currentPosition possibleMoves =
     Array.filter doesPositionExist possibleCoordinates
 
 
-defaultBoard: Array (Array Square)
-defaultBoard = 
-  Array.fromList [ 
-  Array.fromList [ Occupied (Rook Black)
-    , Occupied (Knight Black)
-    , Occupied (Bishop Black)
-    , Occupied (King Black)
-    , Occupied (Queen Black)
-    , Occupied (Bishop Black)
-    , Occupied (Knight Black)
-    , Occupied (Rook Black) ]
-  , Array.fromList [ Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black)
-    , Occupied (Pawn Black) ]
-  , Array.fromList [ Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied ]
-  , Array.fromList [ Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied ]
-  , Array.fromList [ Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied ]
-  , Array.fromList [ Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied
-    , Unoccupied ]
-  , Array.fromList [ Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White)
-    , Occupied (Pawn White) ]
-  , Array.fromList [ Occupied (Rook White)
-    , Occupied (Knight White)
-    , Occupied (Bishop White)
-    , Occupied (Queen White)
-    , Occupied (King  White)
-    , Occupied (Bishop White)
-    , Occupied (Knight White)
-    , Occupied (Rook White) ] ]
-
-
 isEven : Int -> Bool
 isEven num = 
   if modBy 2 num == 0 then
@@ -461,7 +382,7 @@ changePlayer player =
     White -> Black
 
 
---TODO See if there is a better way to do this
+-- TODO See if there is a better way to do this
 getSquare : GameBoard -> (Int, Int) -> Square
 getSquare board position = 
   let
@@ -578,21 +499,20 @@ update msg model =
 
     DoNothing ->
       ( model , Cmd.none)
-
-
-
-
  
+
+
 --View
 
 view : Model -> Document Msg
 view model =
   { title = "Elm-Chess"
   , body = 
-    [ div [class "header"] 
-      [ h1 [class "title"] [ text "Elm Chess"] 
-      , h2 [class "game-status"] [ text (createStatusText model.gameStatus) ]
-      , h4 [class "current-player"] [ text ("Current Player: " ++ (playerToString model.currentPlayer))]
+    [ div [ class "header"] 
+      [ h1 [ class "title"] [ text "Elm Chess"] 
+      , h2 [ class "game-status"] [ text (createStatusText model.gameStatus) ]
+      , h4 [ class "current-player"] [ text ("Current Player: " ++ (playerToString model.currentPlayer))]
+      , button [ class "reset-btn", onClick Reset] [ text "Reset"]
       ]
     , div [class "game-content"] (List.range 0 7 |> List.map (viewBoardRow model)) 
     ] }
@@ -793,3 +713,72 @@ createStatusText status =
       "TIE GAME!"
     InProgress ->
       "In Progress"
+
+
+defaultBoard: Array (Array Square)
+defaultBoard = 
+  Array.fromList [ 
+  Array.fromList [ Occupied (Rook Black)
+    , Occupied (Knight Black)
+    , Occupied (Bishop Black)
+    , Occupied (King Black)
+    , Occupied (Queen Black)
+    , Occupied (Bishop Black)
+    , Occupied (Knight Black)
+    , Occupied (Rook Black) ]
+  , Array.fromList [ Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black)
+    , Occupied (Pawn Black) ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied
+    , Unoccupied ]
+  , Array.fromList [ Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White)
+    , Occupied (Pawn White) ]
+  , Array.fromList [ Occupied (Rook White)
+    , Occupied (Knight White)
+    , Occupied (Bishop White)
+    , Occupied (Queen White)
+    , Occupied (King  White)
+    , Occupied (Bishop White)
+    , Occupied (Knight White)
+    , Occupied (Rook White) ] ]
