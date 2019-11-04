@@ -15,7 +15,7 @@ Board = Array
     , Array[Square, Square, Square, Square, Square, Square, Square, Square]
     ]
 
-Possible future types:
+Possible future type:
 record {
     a: Array[Square, Square, Square, Square, Square, Square, Square, Square]
     b: Array[Square, Square, Square, Square, Square, Square, Square, Square]
@@ -90,25 +90,25 @@ Note: there will heavy testing bewteen phases
 ### Phase 1a.) (complete) 
  * All chess pieces can move and take pieces
    * No special moves 
- * When checked you get an alert of some kind
- * Winner declared on checkmate
+   * Winner declared when king is taken
 
-### Phase 1b.) 
+### Phase 1b.) (complete)
  * Test
 
 ### Phase 2a.) 
- * Implement Tie
  * Special moves
    * En Passant
    * Castling
    * Unit Promotions
- * Install script
- * Uninstall Script
+ * When checked, you get an alert of some kind
+ * Implement Tie
 
 ### Phase 2b.) 
  * Test
 
 ### Phase 3a.)
+ * Install script
+ * Uninstall Script
  * Show taken pieces
  * Move timer
  * Unit Graphics

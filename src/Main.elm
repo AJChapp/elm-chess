@@ -27,8 +27,6 @@ type alias GameBoard
 type Square
   = Occupied Unit
   | Unoccupied
-  | ErrorSquare
-  --TODO ^- Remove that >:(
 
 type Unit
   = Pawn Player
@@ -54,7 +52,6 @@ type alias Model =
 
 type Msg
   = Reset
-  | Error
   | SelectPiece Unit (Int, Int)
   | DeselectPiece
   | MoveUnit (Int, Int) (Int,Int) Unit
@@ -62,13 +59,7 @@ type Msg
 
 init : () -> ( Model, Cmd Msg )
 init _ = 
-  ( { board = defaultBoard
-    , currentPlayer = White
-    , gameStatus = InProgress
-    , activePiece = 
-      { unit = Nothing
-      , unitPosition = Nothing }
-  }, Cmd.none)
+  (intialModel, Cmd.none)
 
 
 getUnitOwner : Unit -> Player 
@@ -106,19 +97,21 @@ generatePawnMoveArray board owner (rowIndex, columnIndex) =
 
     moveArray_v1 = 
       case getSquare board (rowIndex + 1 * decider, columnIndex) of
-        Occupied unit ->
-          if getUnitOwner unit == owner then 
-            Array.fromList [ (1 * decider, 0) ]
-          else
-            Array.empty
-        Unoccupied ->
-          Array.fromList [ (1 * decider, 0) ]
-        ErrorSquare ->
+        Just square ->
+          case square of
+            Occupied unit ->
+              if getUnitOwner unit == owner then 
+                Array.fromList [ (1 * decider, 0) ]
+              else
+                Array.empty
+            Unoccupied ->
+              Array.fromList [ (1 * decider, 0) ]
+        Nothing ->
           Array.empty
     moveArray_v2 = 
       if rowIndex == 1 && decider == 1 || rowIndex == 6 && decider == -1 then
         if checkSpaceBewteenVertical board (rowIndex, columnIndex) (rowIndex + 2 * decider, columnIndex) then
-          if (getSquare board (rowIndex + 2 * decider, columnIndex)) == Unoccupied then
+          if (getSquare board (rowIndex + 2 * decider, columnIndex)) == Just Unoccupied then
             Array.fromList [ (2 * decider, 0) ]
           else
             Array.empty
@@ -129,24 +122,32 @@ generatePawnMoveArray board owner (rowIndex, columnIndex) =
     moveArray_v3 = 
       if doesPositionExist (rowIndex + 1 * decider, columnIndex + 1) then 
         case getSquare board (rowIndex + 1 * decider, columnIndex + 1) of
-          Occupied unit ->
-            if (getUnitOwner unit) /= owner then 
-              Array.fromList [ (1 * decider, 1) ]
-            else
-              Array.empty
-          _ ->
+          Just square ->
+            case square of
+              Occupied unit ->
+                if (getUnitOwner unit) /= owner then 
+                  Array.fromList [ (1 * decider, 1) ]
+                else
+                  Array.empty
+              Unoccupied ->
+                Array.empty
+          Nothing ->
             Array.empty
       else
         Array.empty
     moveArray_v4 = 
       if doesPositionExist (rowIndex + 1 * decider, columnIndex - 1) then
         case getSquare board (rowIndex + 1 * decider, columnIndex - 1) of
-          Occupied unit ->
-            if (getUnitOwner unit) /= owner then 
-              Array.fromList [ (1 * decider, -1) ]
-            else
-              Array.empty
-          _ ->
+          Just square ->
+            case square of
+              Occupied unit ->
+                if (getUnitOwner unit) /= owner then 
+                  Array.fromList [ (1 * decider, -1) ]
+                else
+                  Array.empty
+              Unoccupied ->
+                Array.empty
+          Nothing ->
             Array.empty
       else 
         Array.empty
@@ -215,27 +216,35 @@ generateQueenMoveArray board (rowIndex, columnIndex) =
     finalMoveArray
 
 -- Unit Move Index -- 
-getUnitMovementOptions : GameBoard -> Unit -> (Int, Int) -> Array (Int, Int)
-getUnitMovementOptions board unit unitPosition =
-  case unit of
-    Pawn owner ->
-      generatePawnMoveArray board owner unitPosition 
-    Rook owner -> 
-      generateRookMoveArray board unitPosition
-    Knight owner ->
-      let 
-        moveArray = Array.fromList [ (2,-1), (2,1), (-1,2), (1,2), (-2,1), (-2,-1), (1,-2), (-1,-2) ]
-      in 
-        getPossibleLzs unitPosition moveArray
-    Bishop owner ->
-      generateBishopMoveArray board unitPosition
-    Queen owner ->
-      generateQueenMoveArray board unitPosition
-    King owner ->
-      let
-          moveArray = Array.fromList [ (-1,0), (-1,1), (0,1), (1,1), (1,0), (-1,-1), (0,-1), (1,-1), (0,0)]
-      in 
-          getPossibleLzs unitPosition moveArray
+getUnitMovementOptions : GameBoard -> Maybe Unit -> Maybe (Int, Int) -> Array (Int, Int)
+getUnitMovementOptions board maybeUnit maybeUnitPosition =
+  case maybeUnitPosition of
+    Just unitPosition ->
+      case maybeUnit of
+        Just unit ->
+          case unit of
+            Pawn owner ->
+              generatePawnMoveArray board owner unitPosition 
+            Rook owner -> 
+              generateRookMoveArray board unitPosition
+            Knight owner ->
+              let 
+                moveArray = Array.fromList [ (2,-1), (2,1), (-1,2), (1,2), (-2,1), (-2,-1), (1,-2), (-1,-2) ]
+              in 
+                getPossibleLzs unitPosition moveArray
+            Bishop owner ->
+              generateBishopMoveArray board unitPosition
+            Queen owner ->
+              generateQueenMoveArray board unitPosition
+            King owner ->
+              let
+                  moveArray = Array.fromList [ (-1,0), (-1,1), (0,1), (1,1), (1,0), (-1,-1), (0,-1), (1,-1), (0,0)]
+              in 
+                  getPossibleLzs unitPosition moveArray
+        Nothing ->
+          Array.empty
+    Nothing ->
+      Array.empty
 
 checkSpaceBewteenVertical : GameBoard -> (Int, Int) -> (Int, Int) -> Bool
 checkSpaceBewteenVertical board (currentY, currentX) (newY, newX) =
@@ -250,11 +259,15 @@ checkSpaceBewteenVertical board (currentY, currentX) (newY, newX) =
       List.range (lowY + 1) (highY - 1) -- Get y values for inbetween spaces
       |> List.map (\(y) -> (y, currentX)) -- Group with their x value
       |> List.map (\(y, x) -> getSquare board (y,x)) --Converts to squares
-      |> List.filter (\ (square) -> 
-        case square of
-          Unoccupied ->
-            False
-          _ ->
+      |> List.filter (\ (maybeSquare) -> 
+        case maybeSquare of
+          Just square ->
+            case square of
+              Unoccupied ->
+                False
+              Occupied unit ->
+                True
+          Nothing ->
             True
       ) 
   in
@@ -276,11 +289,15 @@ checkSpaceBewteenHorizontal board (currentY, currentX) (newY, newX) =
       List.range (lowX + 1) (highX - 1) -- Get x values for inbetween spaces
       |> List.map (\(x) -> (currentY, x)) -- Group with their y value
       |> List.map (\(y, x) -> getSquare board (y,x)) --Converts to squares
-      |> List.filter (\ (square) -> 
-        case square of
-          Unoccupied ->
-            False
-          _ ->
+      |> List.filter (\ (maybeSquare) -> 
+        case maybeSquare of
+          Just square ->
+            case square of 
+              Unoccupied ->
+                False
+              Occupied unit ->
+                True
+          Nothing ->
             True
       )
   in
@@ -321,11 +338,15 @@ checkSpaceBewteenDiagonal board (currentY, currentX) (newY, newX) =
     invalidSquares =
       squashIntListToTupleList yValues xValues --Combines Y's with their X's
         |> List.map (\(y, x) -> getSquare board (y, x)) --Converts to squares
-        |> List.filter (\ (square) -> -- Filters out all of the valid squares
-          case square of
-            Unoccupied ->
-              False
-            _ ->
+        |> List.filter (\ (maybeSquare) -> -- Filters out all of the valid squares
+          case maybeSquare of
+            Just square ->
+              case square of 
+                Unoccupied ->
+                  False
+                Occupied unit ->
+                  True
+            Nothing ->
               True
         )
   in
@@ -342,7 +363,7 @@ squashIntListToTupleList yList xList =
   in
     Array.indexedMap (\ i y -> (y, (Maybe.withDefault 10 (Array.get i xArray)))) yArray
       |> Array.filter (\ (y, x) -> 
-        if (x > 10) then
+        if (x > 9) then
           False
         else
           True
@@ -382,8 +403,7 @@ changePlayer player =
     White -> Black
 
 
--- TODO See if there is a better way to do this
-getSquare : GameBoard -> (Int, Int) -> Square
+getSquare : GameBoard -> (Int, Int) -> Maybe Square
 getSquare board position = 
   let
       (rowIndex, columnIndex) = position
@@ -393,96 +413,62 @@ getSquare board position =
           Just squareRow ->
             squareRow
           Nothing ->
-            --TODO see of there is a better way to handle this
-            Array.fromList [ErrorSquare]
+            Array.empty
       maybeCurrentSquare = 
         Array.get columnIndex currentRow
-      currentSquare = 
-        case maybeCurrentSquare of
-          Just square ->
-            square
-          Nothing ->
-            ErrorSquare
   in
-    currentSquare
+    maybeCurrentSquare
 
 --Update
 
 update : Msg -> Model -> ( Model, Cmd Msg)
 update msg model =
-  let
-      --TODO Remove me 
-    _ = Debug.log "MSG" msg 
-  in
   case msg of
     Reset ->
-      ( 
-        { board = defaultBoard
-        , currentPlayer = White
-        , gameStatus = InProgress
-        , activePiece = model.activePiece
-      }, Cmd.none)
-    
-    Error ->
-      ( 
-        { board = defaultBoard
-        , currentPlayer = White
-        , gameStatus = InProgress
-        , activePiece = model.activePiece
-      }, Cmd.none)
+      (intialModel, Cmd.none)
     
     SelectPiece unit unitPosition ->
-      ( 
-        { board = model.board
-        , currentPlayer = model.currentPlayer
-        , gameStatus = InProgress
-        , activePiece = { unit = Just unit , unitPosition = Just unitPosition }
-      }, Cmd.none)
+       ( { model | activePiece = { unit = Just unit, unitPosition = Just unitPosition } }, Cmd.none )
     
     DeselectPiece ->
-      ( 
-        { board = model.board
-        , currentPlayer = model.currentPlayer
-        , gameStatus = InProgress
-        , activePiece = { unit = Nothing, unitPosition = Nothing }
-      }, Cmd.none)
+       ( { model | activePiece = { unit = Nothing, unitPosition = Nothing } }, Cmd.none )
 
     MoveUnit positionFrom positionTo unit ->
       let 
         --TODO clean this up
         (fromRowIndex, fromColumnIndex) = positionFrom
+
         oldFromRow = 
           case Array.get fromRowIndex model.board of
             Just row ->
               row
             Nothing ->
-              Array.repeat 8 ErrorSquare
+              Array.empty
+
         newFromRow = 
           Array.set fromColumnIndex Unoccupied oldFromRow 
+
         startMoveBoard =  Array.set fromRowIndex newFromRow model.board
 
         (toRowIndex, toColumnIndex) = positionTo
+
         oldToRow = 
           case Array.get toRowIndex startMoveBoard of
             Just row ->
               row
             Nothing -> 
-              Array.repeat 8 ErrorSquare
+              Array.empty
+
         newToRow = 
           Array.set toColumnIndex (Occupied unit) oldToRow
 
-        endMoveBoard = 
+        (endMoveBoard, nextPlayer) = 
           if (doesPositionExist positionFrom) && (doesPositionExist positionTo) then
-            Array.set toRowIndex newToRow startMoveBoard
+            ((Array.set toRowIndex newToRow startMoveBoard), (changePlayer model.currentPlayer))
           else
-            model.board
-        nextPlayer = 
-          if (doesPositionExist positionFrom) && (doesPositionExist positionTo) then
-            changePlayer model.currentPlayer
-          else
-            model.currentPlayer
+            (model.board, model.currentPlayer)
       in
-        if ((getSquare model.board positionTo) == Occupied (King nextPlayer)) then
+        if (getSquare model.board positionTo) == (Just <| Occupied <| King nextPlayer) then
           ( 
             { board = endMoveBoard
             , currentPlayer = model.currentPlayer
@@ -509,12 +495,12 @@ view model =
   { title = "Elm-Chess"
   , body = 
     [ div [ class "header"] 
-      [ h1 [ class "title"] [ text "Elm Chess"] 
+      [ h1 [ class "title"] [ text "Smart Chess"] 
       , h2 [ class "game-status"] [ text (createStatusText model.gameStatus) ]
       , h4 [ class "current-player"] [ text ("Current Player: " ++ (playerToString model.currentPlayer))]
       , button [ class "reset-btn", onClick Reset] [ text "Reset"]
       ]
-    , div [class "game-content"] (List.range 0 7 |> List.map (viewBoardRow model)) 
+    , div [class ("game-content " ++ playerToString model.currentPlayer)] (List.range 0 7 |> List.map (viewBoardRow model)) 
     ] }
 
 
@@ -527,31 +513,24 @@ viewBoardButton : Model -> Int -> Int -> Html Msg
 viewBoardButton model rowIndex columnIndex =
   let 
       currentSquare = getSquare model.board (rowIndex, columnIndex)
-      activePiecePosition = 
-        case model.activePiece.unitPosition of 
-          Just activePiecePos ->
-            activePiecePos
-          Nothing ->
-            --TODO is there a better way to do this?
-            (-9,-9)
 
       possibleLzs = 
-        case model.activePiece.unit of
-          Nothing ->
-            Array.empty
-          Just unit ->
-            getUnitMovementOptions model.board unit activePiecePosition 
+        getUnitMovementOptions model.board model.activePiece.unit model.activePiece.unitPosition
 
-      classString = createClassString (rowIndex, columnIndex) possibleLzs activePiecePosition
+      classString = createClassString (rowIndex, columnIndex) possibleLzs model
   in
-    div
-      [ class classString
-      , createSquareOnclick model (rowIndex, columnIndex) |> onClick ]
-      [ currentSquare |> viewBoardButtonText |> text ]
+    case currentSquare of
+      Just square ->
+        div
+          [ class classString
+          , createSquareOnclick model (rowIndex, columnIndex) |> onClick ]
+          [ square |> viewBoardButtonText |> text ]
+      Nothing ->
+        Html.text ""
 
 
-createClassString : (Int, Int) -> Array (Int,Int) -> (Int, Int) -> String
-createClassString (rowIndex, columnIndex) possibleLzs activePiecePosition =
+createClassString : (Int, Int) -> Array (Int,Int) -> Model -> String
+createClassString (rowIndex, columnIndex) possibleLzs model =
   let
       squareColorString = choseBoardSquareColor (rowIndex, columnIndex)
       currentSquarePositionString = " square-" ++ (String.fromInt rowIndex) ++ "," ++ (String.fromInt columnIndex)
@@ -561,7 +540,7 @@ createClassString (rowIndex, columnIndex) possibleLzs activePiecePosition =
         else
           ""
       activePieceString = 
-        if activePiecePosition == (rowIndex, columnIndex) then
+        if model.activePiece.unitPosition == Just (rowIndex, columnIndex) then
           " active_piece"
         else 
           ""
@@ -580,21 +559,8 @@ createSquareOnclick model currentSquarePosition =
   let 
       square = getSquare model.board currentSquarePosition
       currentPlayer = model.currentPlayer
-      activePiecePosition = 
-        case model.activePiece.unitPosition of
-          Just activePiecePos ->
-            activePiecePos
-          Nothing ->
-            (-9, -9)
       possibleLzs = 
-        case model.activePiece.unit of
-          Nothing ->
-            Array.empty
-          Just unit ->
-            if activePiecePosition == (-9, -9) then
-              Array.empty
-            else 
-              getUnitMovementOptions model.board unit activePiecePosition 
+        getUnitMovementOptions model.board model.activePiece.unit model.activePiece.unitPosition
   in
     case model.gameStatus of
       Tie -> 
@@ -603,35 +569,49 @@ createSquareOnclick model currentSquarePosition =
         DoNothing
       InProgress ->
         case square of 
-          Occupied unit ->
-            let 
-              unitOwner = getUnitOwner unit
-            in 
-              if unitOwner == currentPlayer then
-                if currentSquarePosition /= activePiecePosition then
-                  SelectPiece unit currentSquarePosition
-                else
-                  DeselectPiece
-              else
-                case model.activePiece.unit of
-                  Just activeUnit ->
-                    if Array.toList possibleLzs |> List.member currentSquarePosition then
-                      MoveUnit activePiecePosition currentSquarePosition activeUnit
-                    else 
+          Just validSquare ->
+            case validSquare of
+                Occupied unit ->
+                  let 
+                    unitOwner = getUnitOwner unit
+                  in 
+                    if unitOwner == currentPlayer then
+                      case model.activePiece.unitPosition of 
+                        Just activePiecePosition -> 
+                          if currentSquarePosition /= activePiecePosition then
+                            SelectPiece unit currentSquarePosition
+                          else
+                            DeselectPiece
+                        Nothing ->
+                          SelectPiece unit currentSquarePosition
+                    else
+                      case model.activePiece.unit of
+                        Just activeUnit ->
+                          if Array.toList possibleLzs |> List.member currentSquarePosition then
+                            case model.activePiece.unitPosition of
+                              Just activePiecePosition ->
+                                MoveUnit activePiecePosition currentSquarePosition activeUnit
+                              Nothing ->
+                                DoNothing
+                          else 
+                            DoNothing
+                        Nothing ->
+                          DoNothing
+                Unoccupied ->
+                  case model.activePiece.unit of
+                    Just activeUnit ->
+                      if Array.toList possibleLzs |> List.member currentSquarePosition then
+                        case model.activePiece.unitPosition of
+                          Just activePiecePosition ->
+                            MoveUnit activePiecePosition currentSquarePosition activeUnit
+                          Nothing ->
+                            DoNothing
+                      else 
+                        DoNothing
+                    Nothing ->
                       DoNothing
-                  Nothing ->
-                    DoNothing
-          Unoccupied ->
-            case model.activePiece.unit of
-              Just unit ->
-                if Array.toList possibleLzs |> List.member currentSquarePosition then
-                  MoveUnit activePiecePosition currentSquarePosition unit
-                else 
-                  DoNothing
-              Nothing ->
-                DoNothing
-          ErrorSquare ->
-            Error  
+          Nothing ->
+            DoNothing
 
 
 viewBoardButtonText : Square -> String
@@ -677,8 +657,6 @@ viewBoardButtonText square =
                   "W-King"
         Unoccupied ->
           ""
-        ErrorSquare ->
-          "SQUARE_ERROR"
 
 
 choseBoardSquareColor : (Int, Int) -> String
@@ -713,6 +691,17 @@ createStatusText status =
       "TIE GAME!"
     InProgress ->
       "In Progress"
+
+
+intialModel: Model
+intialModel = 
+  { board = defaultBoard
+    , currentPlayer = White
+    , gameStatus = InProgress
+    , activePiece = 
+      { unit = Nothing
+      , unitPosition = Nothing }
+  }
 
 
 defaultBoard: Array (Array Square)
